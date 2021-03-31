@@ -91,7 +91,7 @@ DefExpr* InterfaceSymbol::buildDef(const char* name,
       if (AT->defPoint->init != NULL || AT->defPoint->exprType != NULL)
         USR_FATAL_CONT(expr, "an associated type at present cannot have"
                              " a default value");
-      // support for multi-argument inferfaces is pending #17008
+      // support for multi-argument interfaces is pending #17008
       if (isym->ifcFormals.length > 1)
         USR_FATAL_CONT(expr, "associated types at present are not allowed"
                        " for multi-argument interfaces");
@@ -158,11 +158,13 @@ void InterfaceSymbol::accept(AstVisitor* visitor) {
 }
 
 InterfaceSymbol* InterfaceSymbol::copyInner(SymbolMap* map) {
-  if (this->defPoint && isGlobal(this))
-    INT_FATAL(this, "unexpected");
+  if (this->defPoint && !isGlobal(this))
+    USR_FATAL(this,
+      "only module-level interfaces are currently supported");
   else
-    USR_FATAL_CONT(this,
-                   "only module-level interfaces are currently implemented");
+    USR_FATAL(this,
+      "interface declarations in this context are currently unsupported");
+
   return this; //dummy
 }
 
@@ -271,8 +273,10 @@ ImplementsStmt::ImplementsStmt(IfcConstraint* con, BlockStmt* body)
 }
 
 ImplementsStmt* ImplementsStmt::copyInner(SymbolMap* map) {
-  if (witnesses.n > 0) // this is a non-empty map
-    INT_FATAL(this, "copying of witnesses is to be implemented");
+  if (witnesses.n > 0 || aconsWitnesses.size() > 0)
+    USR_FATAL(this,
+      "implements statements in this context are currently unsupported");
+
   return new ImplementsStmt(COPY_INT(iConstraint),
                             COPY_INT(implBody));
 }
@@ -345,7 +349,8 @@ Expr* ImplementsStmt::getNextExpr(Expr* expr) {
 //
 void introduceConstrainedTypes(FnSymbol* fn) {
   for_formals(formal, fn)
-   if (BlockStmt* typeExpr = formal->typeExpr)
+{
+   if (BlockStmt* typeExpr = formal->typeExpr) {
     if (DefExpr* def = toDefExpr(typeExpr->body.tail)) {
       INT_ASSERT(formal->type == dtUnknown); //fyi
       SET_LINENO(def);
@@ -365,7 +370,23 @@ void introduceConstrainedTypes(FnSymbol* fn) {
         USR_FATAL(typeExpr, "this formal's type query expression"
           " is currently not supported for constrained generic functions");
       typeExpr->remove();
+    } else {
+      std::vector<DefExpr*> defExprs;
+      collectDefExprs(typeExpr, defExprs);
+      if (! defExprs.empty())
+        USR_FATAL(defExprs[0], "this formal's type query expression"
+          " is currently not supported for constrained generic functions");
     }
+   } else {
+     // No declared type. Make it a ConstrainedType.
+     if (formal->type == dtUnknown || formal->type == dtAny) {
+       const char* ctName = astr(formal->name, "_t");
+       TypeSymbol* CT = ConstrainedType::buildSym(ctName, CT_CGFUN_FORMAL);
+       fn->interfaceInfo->addConstrainedType(new DefExpr(CT));
+       formal->type = CT->type;
+     }
+   }
+}
 }
 
 //
@@ -383,7 +404,7 @@ Type* desugarInterfaceAsType(ArgSymbol* arg, SymExpr* se,
   SET_LINENO(se);
 
   // introduce a ConstrainedType
-  TypeSymbol* CT = ConstrainedType::buildSym(astr("t_", isym->name),
+  TypeSymbol* CT = ConstrainedType::buildSym(astr(isym->name, "_t"),
                                              CT_CGFUN_FORMAL);
   ifcInfo->addConstrainedType(new DefExpr(CT));
 
@@ -420,11 +441,11 @@ Type* desugarInterfaceAsType(ArgSymbol* arg, SymExpr* se,
 // for a IfcConstraint interface constraint.
 //
 // If the body of such a wrapper function starts with PRIM_ERROR,
-// it means we tried to infer the corresonding implements statement
+// it means we tried to infer the corresponding implements statement
 // and did not succeed.
 //
 
-const char* implementsStmtWrapperName(InterfaceSymbol* isym) {
+const char* implementsWrapperName(InterfaceSymbol* isym) {
   return astr("|", isym->name);
 }
 
@@ -465,7 +486,7 @@ static void verifyWrapImplementsStmt(FnSymbol* wrapFn, ImplementsStmt* istm,
                                      bool isSuccess) {
   InterfaceSymbol* isym = istm->ifcSymbol();
 
-  INT_ASSERT(wrapFn->name == implementsStmtWrapperName(isym));
+  INT_ASSERT(wrapFn->name == implementsWrapperName(isym));
   INT_ASSERT(interfaceNameForWrapperFn(wrapFn) == isym->name);
   IstmAndSuccess iss = implementsStmtForWrapperFn(wrapFn);
   INT_ASSERT(iss.istm == istm);
@@ -488,7 +509,7 @@ FnSymbol* wrapOneImplementsStatement(ImplementsStmt* istm) {
     return NULL;
   }
   InterfaceSymbol* isym = istm->ifcSymbol();
-  FnSymbol* wrapFn = new FnSymbol(implementsStmtWrapperName(isym));
+  FnSymbol* wrapFn = new FnSymbol(implementsWrapperName(isym));
   wrapFn->addFlag(FLAG_IMPLEMENTS_WRAPPER);
   istm->insertBefore(new DefExpr(wrapFn));
   wrapFn->insertAtTail(istm->remove());

@@ -9,6 +9,8 @@ export CHPL_NIGHTLY_TEST_CONFIG_NAME="perf.cray-cs-hdr.arkouda.release"
 
 # setup arkouda
 source $CWD/common-arkouda.bash
+unset ARKOUDA_ZMQ_PATH
+unset ARKOUDA_HDF5_PATH
 export ARKOUDA_NUMLOCALES=16
 
 module list
@@ -19,12 +21,13 @@ export CHPL_LAUNCHER_PARTITION=rome64Share
 export CHPL_TARGET_CPU=none
 
 # python2 required for chapel 1.23, will not be required with 1.24+
-module load python/2.7.6
+source ~/.setup_python2.bash
 
 module list
 
 export GASNET_PHYSMEM_MAX="9/10"
 export GASNET_ODP_VERBOSE=0
+export CHPL_LAUNCHER=slurm-gasnetrun_ibv
 nightly_args="${nightly_args} -no-buildcheck"
 
 test_release

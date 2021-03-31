@@ -35,8 +35,8 @@
 
 // flags to be added to the aggregation markers
 symbolFlag ( FLAG_AGG_MARKER, npr, "aggregation marker", ncm)
-symbolFlag ( FLAG_AGG_IN_STATIC_ONLY_CLONE, npr, "static only aggregation marker", " this aggreagation is happening in a static only forall clone")
-symbolFlag ( FLAG_AGG_IN_STATIC_AND_DYNAMIC_CLONE, npr, "static and dynamic aggregation marker", " this aggreagation is happening in a static and dynamic forall clone")
+symbolFlag ( FLAG_AGG_IN_STATIC_ONLY_CLONE, npr, "static only aggregation marker", " this aggregation is happening in a static only forall clone")
+symbolFlag ( FLAG_AGG_IN_STATIC_AND_DYNAMIC_CLONE, npr, "static and dynamic aggregation marker", " this aggregation is happening in a static and dynamic forall clone")
 symbolFlag ( FLAG_AGG_GENERATOR, ypr, "aggregator generator", " this function generates and returns an aggregator")
 
 // Indicates an array implementation class can alias other array implementations
@@ -153,6 +153,7 @@ symbolFlag( FLAG_FN_RETARG, npr, "fn returns via _retArg", ncm )
 symbolFlag( FLAG_FOLLOWER_INDEX, npr, "follower index", "a variable representing a follower loop index" )
 symbolFlag( FLAG_FORMAL_TEMP, npr, "formal temp", "a formal temp requiring write-back for an out or inout argument" )
 symbolFlag( FLAG_FORMAL_TEMP_OUT, npr, "formal temp out", "a formal temp to back an out argument" )
+symbolFlag( FLAG_FORMAL_TEMP_OUT_CALLSITE, npr, "formal temp out callsite", "a formal temp to handle out/inout writeback at the callsite" )
 symbolFlag( FLAG_FORWARDING_FN , npr, "forwarding function" , ncm )
 symbolFlag( FLAG_FUNCTION_CLASS , npr, "function class" , "first-class function class representation" )
 symbolFlag( FLAG_FUNCTION_TERMINATES_PROGRAM, ypr, "function terminates program", "function that causes the program to exit" )
